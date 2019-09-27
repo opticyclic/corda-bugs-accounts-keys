@@ -33,4 +33,6 @@ dependencies {
   // Test dependencies
   testCompile "org.testng:testng:$testng_version"
   testCompile "net.corda:corda-node-driver:$corda_release_version"
+  //Gradle doesn't include the tools.jar by default and it is required for Mockito/ByteBuddy to attach
+  testCompile files(org.gradle.internal.jvm.Jvm.current().toolsJar)
 }
