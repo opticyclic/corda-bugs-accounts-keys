@@ -19,6 +19,7 @@ class IOUAccountContract : Contract {
 
     interface Commands : CommandData {
         class Create : TypeOnlyCommandData(), Commands
+        class Amend : TypeOnlyCommandData(), Commands
     }
 
     override fun verify(tx: LedgerTransaction) {
@@ -27,6 +28,7 @@ class IOUAccountContract : Contract {
 
         when (command.value) {
             is Commands.Create -> verifyCreate(tx, signers)
+            is Commands.Amend -> verifyAmend(tx, signers)
             else -> throw IllegalArgumentException("Unrecognised command.")
         }
     }
@@ -43,4 +45,13 @@ class IOUAccountContract : Contract {
         "The IOU's value must be non-negative." using (out.value > 0)
     }
 
+    private fun verifyAmend(tx: LedgerTransaction, signers: Set<PublicKey>) = requireThat {
+        "Only one input should be consumed when amending an IOU." using (tx.inputStates.isNotEmpty() && tx.inputStates.size == 1)
+        "Only one state should be created when amending an IOU." using (tx.outputStates.isNotEmpty() && tx.outputStates.size == 1)
+        "Output states must be IOUAccountStates." using (tx.outputsOfType<IOUAccountState>().isNotEmpty())
+
+        val out = tx.outputsOfType<IOUAccountState>().single()
+        "The lender and the borrower cannot be the same entity." using (out.lender != out.borrower)
+        "All of the participants must be signers." using (signers.containsAll(out.participants.map { it.owningKey }))
+    }
 }
