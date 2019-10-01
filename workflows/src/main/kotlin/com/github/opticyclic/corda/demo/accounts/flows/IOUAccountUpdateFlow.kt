@@ -98,7 +98,7 @@ class IOUAccountUpdateFlow(private val linearId: UniqueIdentifier, private val i
             //Send the state to the counterparty and get it back with their signature.
             progressTracker.currentStep = COLLECTING
             val lenderSession = initiateFlow(lenderAccount.state.data.host)
-            val lenderSignature = subFlow(CollectSignatureFlow(locallySignedTx, lenderSession, borrowerKey))
+            val lenderSignature = subFlow(CollectSignatureFlow(locallySignedTx, lenderSession, lenderKey))
             val fullySignedTx = locallySignedTx.withAdditionalSignatures(lenderSignature)
             //Notarise and record the transaction in both parties' vaults.
             progressTracker.currentStep = FINALISING

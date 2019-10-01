@@ -5,6 +5,7 @@ import com.github.opticyclic.corda.demo.accounts.contracts.IOUAccountContract
 import com.github.opticyclic.corda.demo.accounts.states.IOUAccountState
 import com.r3.corda.lib.accounts.workflows.accountService
 import com.r3.corda.lib.accounts.workflows.flows.RequestKeyForAccount
+import com.r3.corda.lib.accounts.workflows.flows.ShareStateAndSyncAccounts
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
@@ -67,6 +68,7 @@ class IOUAccountFlow(val iouValue: Int, val lenderId: UUID, val borrowerId: UUID
         val iouState = IOUAccountState(iouValue, lenderKey, borrowerKey)
         val command = Command(IOUAccountContract.Commands.Create(), iouState.participants.map { it.owningKey })
 
+
         //Build the transaction.
         val txBuilder = TransactionBuilder(notary)
                 .addOutputState(iouState, IOUAccountContract.IOU_CONTRACT_ID)
@@ -99,7 +101,10 @@ class IOUAccountFlow(val iouValue: Int, val lenderId: UUID, val borrowerId: UUID
             val fullySignedTx = locallySignedTx.withAdditionalSignatures(borrowerSignature)
             //Notarise and record the transaction in both parties' vaults.
             progressTracker.currentStep = FINALISING
-            return subFlow(FinalityFlow(fullySignedTx, listOf(borrowerSession)))
+            val transaction = subFlow(FinalityFlow(fullySignedTx, listOf(borrowerSession)))
+            val state = transaction.tx.outRefsOfType<IOUAccountState>().single()
+            subFlow(ShareStateAndSyncAccounts(state, borrowerAccountInfo.state.data.host))
+            return transaction
         }
     }
 }
